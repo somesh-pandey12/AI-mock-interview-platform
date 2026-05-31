@@ -4,6 +4,7 @@ const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
 const interviewRoutes = require('./routes/interview');
+const forumRoutes = require('./routes/forum');
 require('dotenv').config();
 
 // Load Passport Configuration
@@ -36,6 +37,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
+
 // MongoDB Database Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
@@ -52,6 +54,7 @@ mongoose.connect(process.env.MONGO_URI)
 const authRoutes = require('./routes/auth');
 app.use('/auth', authRoutes);
 app.use('/api/interview', interviewRoutes);
+app.use('/api/forum', forumRoutes);
 
 // Basic Test Route
 app.get('/', (req, res) => {
