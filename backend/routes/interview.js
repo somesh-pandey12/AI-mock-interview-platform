@@ -10,7 +10,7 @@ const Interview = require('../models/Interview');
 
 
 // ===========================================
-// @desc    Start a new interview
+// @desc    Start Interview
 // @route   POST /api/interview/start
 // ===========================================
 router.post('/start', async (req, res) => {
@@ -23,15 +23,12 @@ router.post('/start', async (req, res) => {
     }
 
     try {
-        // Generate questions from Gemini
         const questionsArray = await generateQuestions(techStack);
 
-        // Convert to schema format
         const formattedQuestions = questionsArray.map(q => ({
             question: q
         }));
 
-        // Create interview session
         const newInterview = await Interview.create({
             userId,
             stack: techStack,
@@ -64,7 +61,6 @@ router.post('/submit-answer', async (req, res) => {
     }
 
     try {
-        // Find interview
         const interview = await Interview.findById(interviewId);
 
         if (!interview) {
@@ -73,7 +69,6 @@ router.post('/submit-answer', async (req, res) => {
             });
         }
 
-        // Find question
         const questionItem = interview.questions.id(questionId);
 
         if (!questionItem) {
@@ -82,13 +77,11 @@ router.post('/submit-answer', async (req, res) => {
             });
         }
 
-        // Evaluate answer using Gemini
         const evaluation = await evaluateAnswer(
             questionItem.question,
             userAnswer
         );
 
-        // Save evaluation
         questionItem.userAnswer = userAnswer;
         questionItem.aiFeedback = evaluation.feedback;
         questionItem.score = evaluation.score;
@@ -134,7 +127,6 @@ router.post('/complete', async (req, res) => {
             });
         }
 
-        // Calculate average score
         const totalQuestions = interview.questions.length;
 
         const totalScore = interview.questions.reduce(
@@ -147,7 +139,6 @@ router.post('/complete', async (req, res) => {
                 ? Math.round((totalScore / totalQuestions) * 10) / 10
                 : 0;
 
-        // Update interview
         interview.finalScore = finalAverage;
         interview.status = 'Completed';
 
@@ -168,6 +159,32 @@ router.post('/complete', async (req, res) => {
 
         res.status(500).json({
             message: "Failed to finalize interview details."
+        });
+    }
+});
+
+
+// ===========================================
+// @desc    Get Interview By ID
+// @route   GET /api/interview/:id
+// ===========================================
+router.get('/:id', async (req, res) => {
+    try {
+        const interview = await Interview.findById(req.params.id);
+
+        if (!interview) {
+            return res.status(404).json({
+                message: "Session matching that ID not found."
+            });
+        }
+
+        res.status(200).json(interview);
+
+    } catch (error) {
+        console.error("Error fetching single session:", error);
+
+        res.status(500).json({
+            message: "Server error querying session schema."
         });
     }
 });

@@ -9,20 +9,32 @@ passport.use(new GoogleStrategy({
     scope: ['profile', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
     try {
-        // Check if user already exists in our database
-        let user = await User.findOne({ googleId: profile.id });
+        const userEmail = profile.emails[0].value;
+
+        // 1. Check if user exists by googleId OR by email
+        let user = await User.findOne({
+            $or: [
+                { googleId: profile.id },
+                { email: userEmail }
+            ]
+        });
         
         if (user) {
+            // If user exists by email but doesn't have googleId linked yet, link it now
+            if (!user.googleId) {
+                user.googleId = profile.id;
+                await user.save();
+            }
             return done(null, user);
         }
 
-        // If not, create a brand new user record
+        // 2. If user completely doesn't exist, create a brand new one
         user = await User.create({
             googleId: profile.id,
             name: profile.displayName,
-            email: profile.emails[0].value,
+            email: userEmail,
             profilePic: profile.photos[0]?.value,
-            techStack: [] // Initially empty, user updates this on their platform dashboard
+            techStack: []
         });
         
         return done(null, user);
