@@ -1,26 +1,32 @@
+// 1. Add useAuth to your top imports array
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import API from '../api';
 import Loader from '../components/Loader';
+import { useAuth } from '../context/AuthContext'; // 👈 Import our context hook
 
 export default function Dashboard() {
+  const { user } = useAuth(); // 👈 Call the hook to pull user profile data from session
   const [selectedStack, setSelectedStack] = useState('MERN Stack');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Temporary static ID for development until Google Auth returns a live database profile
-  const temporaryDevUserId = "665a3b934fd2cb295c9a1234"; 
-
   const handleStartInterview = async () => {
+    // Validation check: Make sure a guest can't trigger generation without logging in
+    if (!user || !user._id) {
+      alert("Please authenticate using Google Sign In to store records.");
+      navigate('/');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await API.post('/api/interview/start', {
         techStack: selectedStack,
-        userId: temporaryDevUserId
+        userId: user._id // 👈 Pass the dynamic, authenticated User ID from Atlas!
       });
       
-      // If server responds successfully, capture MongoDB _id and route to it dynamically
       const newInterviewSession = response.data;
       navigate(`/interview/${newInterviewSession._id}`);
     } catch (error) {
@@ -38,12 +44,18 @@ export default function Dashboard() {
       <div className="flex-1 ml-64 p-8">
         <header className="flex justify-between items-center mb-8 border-b border-slate-200 pb-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Welcome back, Developer!</h2>
+            {/* Dynamic Welcome Heading */}
+            <h2 className="text-2xl font-bold text-slate-800">
+              Welcome back, {user?.name || "Developer"}!
+            </h2>
             <p className="text-sm text-slate-500">Launch an automated technical deep-dive assessment session.</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shadow">
-            SD
-          </div>
+          {/* Dynamic Profile Pic Element */}
+          <img 
+            src={user?.profilePic || "https://api.dicebear.com/7.x/bottts/svg"} 
+            className="w-10 h-10 rounded-full border border-slate-200 shadow-sm"
+            alt="profile"
+          />
         </header>
 
         {loading ? (

@@ -3,42 +3,38 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
+const path = require('path');
+
 const interviewRoutes = require('./routes/interview');
 const forumRoutes = require('./routes/forum');
+
 require('dotenv').config();
 
-// Load Passport Configuration
 require('./config/passport');
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 
 app.use(cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true // Allow cookies/auth session sharing
+    credentials: true
 }));
 
-// Session Setup
 app.use(session({
     secret: process.env.SESSION_SECRET || 'keyboard cat',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false, // Change to true when using HTTPS in production
+        secure: false,
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 1 day
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
-// Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-
-// MongoDB Database Connection
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log("████████████████████████████████");
@@ -50,18 +46,26 @@ mongoose.connect(process.env.MONGO_URI)
         console.error(err);
     });
 
-// Import and Use Routes
 const authRoutes = require('./routes/auth');
+
 app.use('/auth', authRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/forum', forumRoutes);
 
-// Basic Test Route
 app.get('/', (req, res) => {
     res.send("AI Mock Interview Platform Backend API running...");
 });
 
-// Start Server
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+    app.get('*', (req, res) => {
+        res.sendFile(
+            path.resolve(__dirname, '../frontend', 'dist', 'index.html')
+        );
+    });
+}
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
